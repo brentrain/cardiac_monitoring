@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h3>Patient Information</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Name:</strong> {{ patient.first_name }} {{ patient.last_name }}</p>
+                        <p><strong>DOB:</strong> {{ patient.date_of_birth.strftime('%Y-%m-%d') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>MRN:</strong> {{ patient.medical_record_number }}</p>
+                        <p><strong>Notes:</strong> {{ patient.notes }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>ECG Monitor</h4>
+                    <div class="d-flex align-items-center">
+                        <label for="rhythmSelector" class="me-2">Select Rhythm:</label>
+                        <select id="rhythmSelector" class="form-select" style="width: auto;">
+                            <option value="normal">Normal Sinus Rhythm</option>
+                            <option value="tachycardia">Sinus Tachycardia</option>
+                            <option value="bradycardia">Sinus Bradycardia</option>
+                            <option value="afib">Atrial Fibrillation</option>
+                            <option value="vtach">Ventricular Tachycardia</option>
+                            <option value="vfib">Ventricular Fibrillation</option>
+                            <option value="heart_block_2">2nd Degree Heart Block</option>
+                            <option value="heart_block_3">3rd Degree Heart Block</option>
+                            <option value="pvc">PVC</option>
+                            <option value="random">Random Rhythm</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="ecg-plot"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="vital-card" id="heart-rate-card">
+            <h5>Heart Rate</h5>
+            <h2 id="heart-rate-value">-- bpm</h2>
+        </div>
+        <div class="vital-card" id="blood-pressure-card">
+            <h5>Blood Pressure</h5>
+            <h2 id="blood-pressure-value">--/-- mmHg</h2>
+        </div>
+        <div class="vital-card" id="oxygen-card">
+            <h5>Oxygen Saturation</h5>
+            <h2 id="oxygen-value">--%</h2>
+        </div>
+        <div class="vital-card" id="temperature-card">
+            <h5>Temperature</h5>
+            <h2 id="temperature-value">--°F</h2>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h4>Rhythm Analysis</h4>
+                <div id="rhythm-status" class="alert alert-info">
+                    Analyzing rhythm...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize the ECG plot with more realistic settings
+    const ecgPlot = document.getElementById('ecg-plot');
+    const numPoints = 1000;
+    const initialData = Array(numPoints).fill(0);
+    
+    const trace = {
+        y: initialData,
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+            color: '#00ff00',
+            width: 2  // Slightly thicker line for clearer display
+        }
+    };
+    
+    const layout = {
+        title: 'Real-time ECG',
+        paper_bgcolor: '#000000',
+        plot_bgcolor: '#000000',
+        xaxis: {
+            showgrid: true,
+            gridcolor: '#202020',
+            gridwidth: 1,
+            showticklabels: false
+        },
+        yaxis: {
+            showgrid: true,
+            gridcolor: '#202020',
+            gridwidth: 1,
+            range: [-1.5, 3.5],  // Adjusted range for better visualization
+            showticklabels: false
+        },
+        margin: { t: 40, l: 30, r: 30, b: 30 },
+        height: 400,
+        showlegend: false
+    };
+
+    Plotly.newPlot(ecgPlot, [trace], layout);
+
+    // Improved ECG wave generator functions
+    function gaussian(x, mean, std) {
+        return Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
+    }
+
+    // Add smoothing function
+    function smoothSignal(value, prevValue) {
+        const smoothingFactor = 0.2;
+        return prevValue + smoothingFactor * (value - prevValue);
+    }
+
+    // Rhythm pattern generators with reduced noise
+    const rhythmPatterns = {
+        normal: function(t) {
+            const pWave = 0.25 * gaussian(t % 200, 50, 8);
+            const qWave = -0.3 * gaussian(t % 200, 90, 2);
+            const rWave = 3 * gaussian(t % 200, 95, 2);
+            const sWave = -0.5 * gaussian(t % 200, 100, 2);
+            const tWave = 0.4 * gaussian(t % 200, 150, 12);
+            return pWave + qWave + rWave + sWave + tWave;
+        },
+        
+        tachycardia: function(t) {
+            return rhythmPatterns.normal(t * 1.8);  // Even faster rhythm
+        },
+        
+        bradycardia: function(t) {
+            return rhythmPatterns.normal(t * 0.6);  // Even slower rhythm
+        },
+        
+        afib: function(t) {
+            const baseSignal = rhythmPatterns.normal(t);
+            const irregularity = Math.sin(t * 0.1) * 0.3;
+            return baseSignal * (1 + irregularity);
+        },
+        
+        vtach: function(t) {
+            const frequency = t * 2;
+            return 2.5 * Math.sin(frequency * 0.1) * gaussian(t % 100, 50, 15);
+        },
+        
+        vfib: function(t) {
+            // Smoother VFib pattern
+            return (
+                1.5 * Math.sin(t * 0.3) + 
+                Math.sin(t * 0.5) * 0.5 + 
+                Math.sin(t * 0.7) * 0.3
+            );
+        },
+        
+        heart_block_2: function(t) {
+            if ((t % 400) > 200) {
+                return 0.1 * gaussian(t % 200, 50, 8); // Just P waves during block
+            }
+            return rhythmPatterns.normal(t);
+        },
+        
+        heart_block_3: function(t) {
+            const pWave = 0.25 * gaussian(t % 150, 50, 8);
+            const qrsComplex = rhythmPatterns.normal(t % 280);
+            return pWave + (t % 180 < 90 ? qrsComplex : 0);
+        },
+        
+        pvc: function(t) {
+            if ((t % 800) > 750) {
+                // Cleaner PVC morphology
+                return 4 * gaussian(t % 50, 25, 4) - 
+                       1.5 * gaussian(t % 50, 35, 4);
+            }
+            return rhythmPatterns.normal(t);
+        }
+    };
+
+    let currentRhythm = 'normal';
+    let t = 0;
+    let prevPoint = 0;  // Store previous point for smoothing
+    
+    // Update rhythm selection
+    document.getElementById('rhythmSelector').addEventListener('change', function(e) {
+        currentRhythm = e.target.value;
+        if (currentRhythm === 'random') {
+            const rhythms = Object.keys(rhythmPatterns).filter(r => r !== 'random');
+            currentRhythm = rhythms[Math.floor(Math.random() * rhythms.length)];
+        }
+        // Reset smoothing when changing rhythms
+        prevPoint = 0;
+    });
+
+    function generateECGPoint(t) {
+        const rhythmFunction = rhythmPatterns[currentRhythm] || rhythmPatterns.normal;
+        const rawSignal = rhythmFunction(t);
+        const minimalNoise = (Math.random() - 0.5) * 0.02;  // Reduced noise
+        const signal = rawSignal + minimalNoise;
+        
+        // Apply smoothing
+        prevPoint = smoothSignal(signal, prevPoint);
+        return prevPoint;
+    }
+
+    // Update ECG trace
+    function updateECG() {
+        const newY = trace.y.slice(1);
+        const newPoint = generateECGPoint(t);
+        newY.push(newPoint);
+        
+        Plotly.update(ecgPlot, {
+            y: [newY]
+        });
+        
+        t += 1;
+        
+        // Update heart rate based on rhythm
+        if (t % 200 === 0) {
+            let heartRate;
+            switch(currentRhythm) {
+                case 'tachycardia':
+                    heartRate = Math.floor(Math.random() * (180 - 120) + 120);
+                    break;
+                case 'bradycardia':
+                    heartRate = Math.floor(Math.random() * (60 - 40) + 40);
+                    break;
+                case 'vtach':
+                    heartRate = Math.floor(Math.random() * (250 - 180) + 180);
+                    break;
+                case 'afib':
+                    heartRate = Math.floor(Math.random() * (180 - 100) + 100);
+                    break;
+                default:
+                    heartRate = Math.floor(Math.random() * (100 - 60) + 60);
+            }
+            document.getElementById('heart-rate-value').textContent = `${heartRate} bpm`;
+            updateCardStatus('heart-rate-card', heartRate, 60, 100);
+        }
+    }
+
+    // Update vitals
+    function updateVitals() {
+        const systolic = Math.floor(Math.random() * (140 - 110) + 110);
+        const diastolic = Math.floor(Math.random() * (90 - 70) + 70);
+        const oxygen = Math.floor(Math.random() * (100 - 95) + 95);
+        const temperature = (Math.random() * (99.5 - 97.5) + 97.5).toFixed(1);
+
+        document.getElementById('blood-pressure-value').textContent = `${systolic}/${diastolic} mmHg`;
+        document.getElementById('oxygen-value').textContent = `${oxygen}%`;
+        document.getElementById('temperature-value').textContent = `${temperature}°F`;
+
+        updateCardStatus('oxygen-card', oxygen, 95, 100);
+        updateCardStatus('temperature-card', temperature, 97.5, 99.5);
+    }
+
+    function updateCardStatus(cardId, value, min, max) {
+        const card = document.getElementById(cardId);
+        card.className = 'vital-card';
+        
+        if (value < min || value > max) {
+            card.classList.add('critical');
+        } else if (value === min || value === max) {
+            card.classList.add('warning');
+        } else {
+            card.classList.add('normal');
+        }
+    }
+
+    // AI Analysis function
+    function analyzeRhythm() {
+        const rhythmConfidence = Math.random() * 0.3 + 0.7; // 70-100% confidence
+        let detectedRhythm = currentRhythm;
+        
+        // Simulate AI making occasional mistakes
+        if (Math.random() < 0.1) { // 10% chance of misclassification
+            const rhythms = Object.keys(rhythmPatterns).filter(r => r !== currentRhythm && r !== 'random');
+            detectedRhythm = rhythms[Math.floor(Math.random() * rhythms.length)];
+        }
+
+        // Map rhythm types to display names and alert classes
+        const rhythmInfo = {
+            normal: { name: 'Normal Sinus Rhythm', class: 'alert-success' },
+            tachycardia: { name: 'Sinus Tachycardia', class: 'alert-warning' },
+            bradycardia: { name: 'Sinus Bradycardia', class: 'alert-warning' },
+            afib: { name: 'Atrial Fibrillation', class: 'alert-danger' },
+            vtach: { name: 'Ventricular Tachycardia', class: 'alert-danger' },
+            vfib: { name: 'Ventricular Fibrillation', class: 'alert-danger' },
+            heart_block_2: { name: '2nd Degree Heart Block', class: 'alert-warning' },
+            heart_block_3: { name: '3rd Degree Heart Block', class: 'alert-danger' },
+            pvc: { name: 'Premature Ventricular Contractions', class: 'alert-warning' }
+        };
+
+        const statusDiv = document.getElementById('rhythm-status');
+        const rhythmDisplay = rhythmInfo[detectedRhythm] || rhythmInfo.normal;
+        statusDiv.className = `alert ${rhythmDisplay.class}`;
+        statusDiv.textContent = `AI Analysis: ${rhythmDisplay.name} (Confidence: ${(rhythmConfidence * 100).toFixed(1)}%)`;
+    }
+
+    // Update ECG more frequently for smooth animation
+    setInterval(updateECG, 20);  // 50 fps update rate
+    
+    // Update other vitals every second
+    setInterval(updateVitals, 1000);
+
+    // Update AI analysis every 3 seconds
+    setInterval(analyzeRhythm, 3000);
+</script>
+{% endblock %} 
