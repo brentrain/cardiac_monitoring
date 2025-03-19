@@ -1,6 +1,6 @@
-# Cardiac Monitoring System
+# RhythmIQ - a smart, AI powered analysis sytem
 
-A web-based cardiac monitoring system built with Flask that provides real-time ECG visualization and arrhythmia detection.
+A web-based cardiac monitoring system built with Flask that provides real-time ECG visualization and arrhythmia detection. This system aims to reduce alarm fatigue in healthcare settings by providing intelligent, context-aware monitoring and alerting.
 
 ## Features
 
@@ -18,6 +18,17 @@ A web-based cardiac monitoring system built with Flask that provides real-time E
 - AI-based rhythm analysis
 - Vital signs monitoring (Heart Rate, Blood Pressure, O2 Saturation, Temperature)
 - Patient information display
+- Smart alarm system that reduces false positives and alarm fatigue
+
+## About Alarm Fatigue
+
+Alarm fatigue is a significant challenge in healthcare settings, where healthcare providers become desensitized to medical device alarms due to the high frequency of false or non-actionable alerts. This system addresses this issue by:
+
+- Implementing intelligent alarm thresholds based on patient history
+- Using AI to reduce false positives in arrhythmia detection
+- Providing context-aware alerts that prioritize critical events
+- Allowing customizable alarm settings based on patient risk factors
+- Supporting alarm escalation protocols for different severity levels
 
 ## Installation
 
