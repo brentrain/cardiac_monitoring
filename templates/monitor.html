@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <div class="row">
         <!-- Patient Information -->
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card bg-dark text-white mb-3">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Patient Information</h5>
@@ -19,7 +19,7 @@
         </div>
 
         <!-- Main ECG Display -->
-        <div class="col-md-6">
+        <div class="col-md-7">
             <div class="card bg-dark text-white mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">ECG Monitor</h5>
@@ -31,6 +31,9 @@
                             <option value="afib">Atrial Fibrillation</option>
                             <option value="vtach">Ventricular Tachycardia</option>
                             <option value="vfib">Ventricular Fibrillation</option>
+                            <option value="torsades">Torsades de Pointes</option>
+                            <option value="asystole">Asystole</option>
+                            <option value="pea">Pulseless Electrical Activity</option>
                             <option value="heart_block_2">2nd Degree Heart Block</option>
                             <option value="heart_block_3">3rd Degree Heart Block</option>
                             <option value="pvc">Premature Ventricular Contractions</option>
@@ -39,7 +42,7 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <div id="ecg-plot" style="height: 200px;"></div>
+                    <div id="ecg-plot" style="height: 300px;"></div>
                 </div>
             </div>
         </div>
@@ -142,15 +145,101 @@
         border-color: #4d4d4d;
         color: #ffffff;
     }
+    .alarm-active {
+        animation: alarm-flash 1s infinite;
+    }
+    @keyframes alarm-flash {
+        0% { color: #00ff00; }
+        50% { color: #ff0000; }
+        100% { color: #00ff00; }
+    }
+    .dangerous-rhythm {
+        color: #ff0000 !important;
+    }
+    @keyframes heart-rate-flash {
+        0% { color: #00ff00; }
+        50% { color: #ff0000; }
+        100% { color: #00ff00; }
+    }
+    .heart-rate-critical {
+        animation: heart-rate-flash 1s infinite;
+    }
+    @keyframes critical-flash {
+        0% { 
+            background-color: #2d2d2d;
+        }
+        50% { 
+            background-color: #3d1a1a;
+        }
+        100% { 
+            background-color: #2d2d2d;
+        }
+    }
+    .vital-sign.critical {
+        animation: critical-flash 1s infinite;
+    }
+    .vital-sign.critical .vital-value,
+    .vital-sign.critical .vital-unit {
+        color: #ff0000;
+    }
 </style>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // Initialize audio context and load alarm sound
+    let audioContext;
+    let alarmSound;
+    let alarmInterval;
+    let isAlarmPlaying = false;
+
+    // Function to initialize audio
+    async function initAudio() {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const response = await fetch('/static/alarm.mp3');
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            alarmSound = audioBuffer;
+        } catch (error) {
+            console.error('Error loading alarm sound:', error);
+        }
+    }
+
+    // Function to play alarm sound
+    function playAlarm() {
+        if (!isAlarmPlaying && alarmSound) {
+            isAlarmPlaying = true;
+            const source = audioContext.createBufferSource();
+            source.buffer = alarmSound;
+            source.connect(audioContext.destination);
+            source.start(0);
+            
+            // Play alarm every 2 seconds
+            alarmInterval = setInterval(() => {
+                const newSource = audioContext.createBufferSource();
+                newSource.buffer = alarmSound;
+                newSource.connect(audioContext.destination);
+                newSource.start(0);
+            }, 2000);
+        }
+    }
+
+    // Function to stop alarm sound
+    function stopAlarm() {
+        if (isAlarmPlaying) {
+            isAlarmPlaying = false;
+            clearInterval(alarmInterval);
+        }
+    }
+
+    // Initialize audio when page loads
+    initAudio();
+
     // Initialize the ECG plot with more realistic settings
     const ecgPlot = document.getElementById('ecg-plot');
-    const numPoints = 1000;
+    const numPoints = 3000;  // 6 seconds * 500 points per second
     const initialData = Array(numPoints).fill(0);
     
     const trace = {
@@ -169,16 +258,16 @@
         plot_bgcolor: '#000000',
         xaxis: {
             showgrid: true,
-            gridcolor: '#202020',
+            gridcolor: 'rgba(255, 255, 255, 0.3)',
             gridwidth: 1,
             showticklabels: false,
-            range: [0, 1000],
+            range: [0, 3000],  // Increased to show 6 seconds (6 * 500 points per second)
             gridpattern: 'dot',
             griddash: [1, 4]
         },
         yaxis: {
             showgrid: true,
-            gridcolor: '#202020',
+            gridcolor: 'rgba(255, 255, 255, 0.3)',
             gridwidth: 1,
             range: [-1.5, 3.5],
             showticklabels: false,
@@ -186,31 +275,57 @@
             griddash: [1, 4]
         },
         margin: { t: 30, l: 30, r: 30, b: 30 },
-        height: 200,
+        height: 300,  // Increased height for better visibility
         showlegend: false,
         shapes: [
-            // Add vertical lines every 200 units (5mm on ECG paper)
-            ...Array.from({length: 6}, (_, i) => ({
+            // Add major vertical lines every 250 units (5mm on ECG paper = 0.2 seconds)
+            ...Array.from({length: 13}, (_, i) => ({  // Increased number of major lines
                 type: 'line',
-                x0: i * 200,
+                x0: i * 250,
                 y0: -1.5,
-                x1: i * 200,
+                x1: i * 250,
                 y1: 3.5,
                 line: {
-                    color: '#202020',
+                    color: 'rgba(255, 255, 255, 0.5)',
                     width: 1,
                     dash: 'dot'
                 }
             })),
-            // Add horizontal lines every 0.5 units (5mm on ECG paper)
+            // Add minor vertical lines every 50 units (1mm on ECG paper = 0.04 seconds)
+            ...Array.from({length: 61}, (_, i) => ({  // Increased number of minor lines
+                type: 'line',
+                x0: i * 50,
+                y0: -1.5,
+                x1: i * 50,
+                y1: 3.5,
+                line: {
+                    color: 'rgba(255, 255, 255, 0.2)',
+                    width: 1,
+                    dash: 'dot'
+                }
+            })),
+            // Add major horizontal lines every 0.5 units (5mm on ECG paper = 0.5mV)
             ...Array.from({length: 11}, (_, i) => ({
                 type: 'line',
                 x0: 0,
                 y0: -1.5 + (i * 0.5),
-                x1: 1000,
+                x1: 3000,  // Extended to match new range
                 y1: -1.5 + (i * 0.5),
                 line: {
-                    color: '#202020',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    width: 1,
+                    dash: 'dot'
+                }
+            })),
+            // Add minor horizontal lines every 0.1 units (1mm on ECG paper = 0.1mV)
+            ...Array.from({length: 51}, (_, i) => ({
+                type: 'line',
+                x0: 0,
+                y0: -1.5 + (i * 0.1),
+                x1: 3000,  // Extended to match new range
+                y1: -1.5 + (i * 0.1),
+                line: {
+                    color: 'rgba(255, 255, 255, 0.2)',
                     width: 1,
                     dash: 'dot'
                 }
@@ -244,6 +359,10 @@
         const smoothingFactor = 0.2;
         return prevValue + smoothingFactor * (value - prevValue);
     }
+
+    // Add variables for dangerous rhythm timing
+    let dangerousRhythmStartTime = 0;
+    const DANGEROUS_RHYTHM_DELAY = 5000; // 5 seconds in milliseconds
 
     // Rhythm pattern generators with reduced noise
     const rhythmPatterns = {
@@ -304,6 +423,28 @@
                        1.5 * gaussian(t % 50, 35, 4);
             }
             return rhythmPatterns.normal(t);
+        },
+        
+        asystole: function(t) {
+            // Asystole shows a flat line with minimal noise
+            return (Math.random() - 0.5) * 0.05;  // Very small random fluctuations
+        },
+        
+        pea: function(t) {
+            // PEA shows organized electrical activity but no mechanical contraction
+            // This is represented by small, organized waves
+            const smallPWave = 0.1 * gaussian(t % 200, 50, 8);
+            const smallQRS = 0.2 * gaussian(t % 200, 95, 2);
+            const smallTWave = 0.05 * gaussian(t % 200, 150, 12);
+            return smallPWave + smallQRS + smallTWave;
+        },
+        
+        torsades: function(t) {
+            // Torsades de Pointes shows a twisting pattern around the baseline
+            const baseFrequency = t * 0.2;
+            const twistFrequency = t * 0.05;
+            const amplitude = 2.5;
+            return amplitude * Math.sin(baseFrequency) * Math.sin(twistFrequency);
         }
     };
 
@@ -320,6 +461,15 @@
         }
         // Reset smoothing when changing rhythms
         prevPoint = 0;
+        
+        // Reset dangerous rhythm timer
+        dangerousRhythmStartTime = 0;
+        
+        // Stop alarm when changing rhythms
+        stopAlarm();
+        
+        // Remove critical class from heart rate vital sign
+        document.querySelector('.vital-sign').classList.remove('critical');
     });
 
     function generateECGPoint(t) {
@@ -339,8 +489,40 @@
         const newPoint = generateECGPoint(t);
         newY.push(newPoint);
         
+        // Check for dangerous rhythms and update display accordingly
+        const currentTime = Date.now();
+        const isDangerousRhythm = currentRhythm === 'vtach' || currentRhythm === 'vfib' || 
+                                 currentRhythm === 'asystole' || currentRhythm === 'pea' ||
+                                 currentRhythm === 'torsades';
+        
+        if (isDangerousRhythm) {
+            if (dangerousRhythmStartTime === 0) {
+                dangerousRhythmStartTime = currentTime;
+            }
+            
+            // Only trigger alarm and color change after 5 seconds
+            if (currentTime - dangerousRhythmStartTime >= DANGEROUS_RHYTHM_DELAY) {
+                trace.line.color = '#ff0000';
+                playAlarm();
+                // Add critical class to heart rate vital sign
+                document.querySelector('.vital-sign').classList.add('critical');
+            } else {
+                trace.line.color = '#00ff00';
+                stopAlarm();
+                // Remove critical class from heart rate vital sign
+                document.querySelector('.vital-sign').classList.remove('critical');
+            }
+        } else {
+            dangerousRhythmStartTime = 0;
+            trace.line.color = '#00ff00';
+            stopAlarm();
+            // Remove critical class from heart rate vital sign
+            document.querySelector('.vital-sign').classList.remove('critical');
+        }
+        
         Plotly.update(ecgPlot, {
-            y: [newY]
+            y: [newY],
+            line: { color: trace.line.color }
         });
         
         t += 1;
@@ -358,14 +540,30 @@
                 case 'vtach':
                     heartRate = Math.floor(Math.random() * (250 - 180) + 180);
                     break;
+                case 'vfib':
+                    heartRate = Math.floor(Math.random() * (300 - 200) + 200);
+                    break;
+                case 'torsades':
+                    heartRate = Math.floor(Math.random() * (250 - 200) + 200);
+                    break;
+                case 'asystole':
+                    heartRate = 0;  // No heart rate in asystole
+                    break;
+                case 'pea':
+                    heartRate = Math.floor(Math.random() * (40 - 20) + 20);  // Very low heart rate
+                    break;
                 case 'afib':
                     heartRate = Math.floor(Math.random() * (180 - 100) + 100);
                     break;
                 default:
                     heartRate = Math.floor(Math.random() * (100 - 60) + 60);
             }
-            document.getElementById('heart-rate').textContent = `${heartRate} bpm`;
-            updateCardStatus('heart-rate-card', heartRate, 60, 100);
+            const heartRateElement = document.getElementById('heart-rate');
+            heartRateElement.textContent = `${heartRate} bpm`;
+            // Only update card status if not in a dangerous rhythm
+            if (!isDangerousRhythm || currentTime - dangerousRhythmStartTime < DANGEROUS_RHYTHM_DELAY) {
+                updateCardStatus('heart-rate-card', heartRate, 60, 100);
+            }
         }
     }
 
@@ -416,9 +614,12 @@
             afib: { name: 'Atrial Fibrillation', class: 'alert-danger' },
             vtach: { name: 'Ventricular Tachycardia', class: 'alert-danger' },
             vfib: { name: 'Ventricular Fibrillation', class: 'alert-danger' },
+            torsades: { name: 'Torsades de Pointes', class: 'alert-danger' },
             heart_block_2: { name: '2nd Degree Heart Block', class: 'alert-warning' },
             heart_block_3: { name: '3rd Degree Heart Block', class: 'alert-danger' },
-            pvc: { name: 'Premature Ventricular Contractions', class: 'alert-warning' }
+            pvc: { name: 'Premature Ventricular Contractions', class: 'alert-warning' },
+            asystole: { name: 'Asystole', class: 'alert-warning' },
+            pea: { name: 'Pulseless Electrical Activity', class: 'alert-warning' }
         };
 
         const statusDiv = document.getElementById('ai-analysis');
@@ -435,5 +636,196 @@
 
     // Update AI analysis every 3 seconds
     setInterval(analyzeRhythm, 3000);
+
+    // Add simulator connection controls
+    const simulatorControls = document.createElement('div');
+    simulatorControls.className = 'simulator-controls';
+    simulatorControls.innerHTML = `
+        <div class="simulator-panel">
+            <select id="portSelector" class="form-select form-select-sm bg-dark text-white">
+                <option value="">Auto-detect port</option>
+            </select>
+            <div class="btn-group">
+                <button id="refreshPorts" class="btn btn-secondary">Refresh Ports</button>
+                <button id="connectSimulator" class="btn btn-primary">Connect</button>
+                <button id="disconnectSimulator" class="btn btn-danger" disabled>Disconnect</button>
+            </div>
+            <div id="simulatorStatus" class="status-indicator">
+                Status: Disconnected
+            </div>
+        </div>
+    `;
+    document.querySelector('.card-header').appendChild(simulatorControls);
+
+    // Add styles for simulator controls
+    const style = document.createElement('style');
+    style.textContent = `
+        .simulator-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: 1rem;
+        }
+        .simulator-panel {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        #portSelector {
+            min-width: 200px;
+        }
+        .status-indicator {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        .status-indicator.connected {
+            color: #00ff00;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Function to refresh available ports
+    async function refreshPorts() {
+        try {
+            const response = await fetch('/simulator/ports');
+            const data = await response.json();
+            
+            const portSelector = document.getElementById('portSelector');
+            // Clear existing options except auto-detect
+            portSelector.innerHTML = '<option value="">Auto-detect port</option>';
+            
+            // Add available ports
+            data.ports.forEach(port => {
+                const option = document.createElement('option');
+                option.value = port.device;
+                option.textContent = `${port.device} - ${port.description}`;
+                portSelector.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error fetching ports:', error);
+            alert('Failed to fetch available ports. Check console for details.');
+        }
+    }
+
+    // Modified connect function to use selected port
+    async function connectToSimulator() {
+        try {
+            const selectedPort = document.getElementById('portSelector').value;
+            const response = await fetch('/simulator/connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ port: selectedPort })  // Empty string will trigger auto-detection
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                isSimulatorConnected = true;
+                document.getElementById('connectSimulator').disabled = true;
+                document.getElementById('disconnectSimulator').disabled = false;
+                document.getElementById('portSelector').disabled = true;
+                document.getElementById('refreshPorts').disabled = true;
+                document.getElementById('simulatorStatus').textContent = 'Status: Connected';
+                document.getElementById('simulatorStatus').className = 'status-indicator connected';
+                
+                // Start polling for ECG data
+                simulatorDataInterval = setInterval(pollECGData, 20); // 50Hz polling
+            } else {
+                alert('Failed to connect to simulator: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error connecting to simulator:', error);
+            alert('Failed to connect to simulator. Check console for details.');
+        }
+    }
+
+    // Modified disconnect function
+    async function disconnectFromSimulator() {
+        try {
+            const response = await fetch('/simulator/disconnect', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                isSimulatorConnected = false;
+                document.getElementById('connectSimulator').disabled = false;
+                document.getElementById('disconnectSimulator').disabled = true;
+                document.getElementById('portSelector').disabled = false;
+                document.getElementById('refreshPorts').disabled = false;
+                document.getElementById('simulatorStatus').textContent = 'Status: Disconnected';
+                document.getElementById('simulatorStatus').className = 'status-indicator';
+                
+                // Stop polling for ECG data
+                if (simulatorDataInterval) {
+                    clearInterval(simulatorDataInterval);
+                    simulatorDataInterval = null;
+                }
+            }
+        } catch (error) {
+            console.error('Error disconnecting from simulator:', error);
+            alert('Failed to disconnect from simulator. Check console for details.');
+        }
+    }
+
+    // Event listeners for simulator controls
+    document.getElementById('refreshPorts').addEventListener('click', refreshPorts);
+    document.getElementById('connectSimulator').addEventListener('click', connectToSimulator);
+    document.getElementById('disconnectSimulator').addEventListener('click', disconnectFromSimulator);
+
+    // Initial port refresh
+    refreshPorts();
+
+    // Simulator connection handling
+    let isSimulatorConnected = false;
+    let simulatorDataInterval = null;
+
+    async function pollECGData() {
+        if (!isSimulatorConnected) return;
+        
+        try {
+            const response = await fetch('/simulator/ecg_data');
+            const data = await response.json();
+            
+            if (data.length > 0) {
+                // Update ECG trace with real data
+                Plotly.update(ecgPlot, {
+                    y: [data]
+                });
+                
+                // Calculate heart rate from real data
+                calculateHeartRate(data);
+            }
+        } catch (error) {
+            console.error('Error polling ECG data:', error);
+        }
+    }
+
+    function calculateHeartRate(ecgData) {
+        // Simple peak detection for heart rate calculation
+        let peaks = 0;
+        let lastPeak = 0;
+        const threshold = 1.0; // Adjust based on your ECG signal amplitude
+        
+        for (let i = 1; i < ecgData.length - 1; i++) {
+            if (ecgData[i] > threshold && 
+                ecgData[i] > ecgData[i-1] && 
+                ecgData[i] > ecgData[i+1] &&
+                i - lastPeak > 100) { // Minimum 200ms between peaks
+                peaks++;
+                lastPeak = i;
+            }
+        }
+        
+        // Calculate heart rate (beats per minute)
+        const timeWindow = ecgData.length / 500; // seconds (assuming 500Hz sampling)
+        const heartRate = Math.round((peaks / timeWindow) * 60);
+        
+        // Update heart rate display
+        const heartRateElement = document.getElementById('heart-rate');
+        heartRateElement.textContent = `${heartRate} bpm`;
+        
+        // Update card status
+        updateCardStatus('heart-rate-card', heartRate, 60, 100);
+    }
 </script>
 {% endblock %} 

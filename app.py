@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from simulator_connection import simulator_bp
 
 # Load environment variables
 load_dotenv()
@@ -13,6 +14,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cardiac_monitoring.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
+app.register_blueprint(simulator_bp, url_prefix='/simulator')
 
 # Patient Model
 class Patient(db.Model):
@@ -39,7 +42,7 @@ class VitalSigns(db.Model):
 # Routes
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('monitor.html')
 
 @app.route('/patients', methods=['GET', 'POST'])
 def patients():
