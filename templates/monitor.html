@@ -1,35 +1,30 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-body">
-                <h3>Patient Information</h3>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Name:</strong> {{ patient.first_name }} {{ patient.last_name }}</p>
-                        <p><strong>DOB:</strong> {{ patient.date_of_birth.strftime('%Y-%m-%d') }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>MRN:</strong> {{ patient.medical_record_number }}</p>
-                        <p><strong>Notes:</strong> {{ patient.notes }}</p>
-                    </div>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Patient Information -->
+        <div class="col-md-3">
+            <div class="card bg-dark text-white mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Patient Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> <span id="patient-name">John Doe</span></p>
+                    <p><strong>ID:</strong> <span id="patient-id">12345</span></p>
+                    <p><strong>Age:</strong> <span id="patient-age">45</span></p>
+                    <p><strong>Room:</strong> <span id="patient-room">301</span></p>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4>ECG Monitor</h4>
-                    <div class="d-flex align-items-center">
-                        <label for="rhythmSelector" class="me-2">Select Rhythm:</label>
-                        <select id="rhythmSelector" class="form-select" style="width: auto;">
+        <!-- Main ECG Display -->
+        <div class="col-md-6">
+            <div class="card bg-dark text-white mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">ECG Monitor</h5>
+                    <div>
+                        <select id="rhythmSelector" class="form-select form-select-sm bg-dark text-white">
                             <option value="normal">Normal Sinus Rhythm</option>
                             <option value="tachycardia">Sinus Tachycardia</option>
                             <option value="bradycardia">Sinus Bradycardia</option>
@@ -38,47 +33,117 @@
                             <option value="vfib">Ventricular Fibrillation</option>
                             <option value="heart_block_2">2nd Degree Heart Block</option>
                             <option value="heart_block_3">3rd Degree Heart Block</option>
-                            <option value="pvc">PVC</option>
+                            <option value="pvc">Premature Ventricular Contractions</option>
                             <option value="random">Random Rhythm</option>
                         </select>
                     </div>
                 </div>
-                <div id="ecg-plot"></div>
+                <div class="card-body p-0">
+                    <div id="ecg-plot" style="height: 200px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vital Signs -->
+        <div class="col-md-3">
+            <div class="card bg-dark text-white mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Vital Signs</h5>
+                </div>
+                <div class="card-body">
+                    <div class="vital-sign">
+                        <span class="vital-label">Heart Rate:</span>
+                        <span id="heart-rate" class="vital-value">75</span>
+                        <span class="vital-unit">bpm</span>
+                    </div>
+                    <div class="vital-sign">
+                        <span class="vital-label">Blood Pressure:</span>
+                        <span id="blood-pressure" class="vital-value">120/80</span>
+                        <span class="vital-unit">mmHg</span>
+                    </div>
+                    <div class="vital-sign">
+                        <span class="vital-label">O2 Saturation:</span>
+                        <span id="o2-saturation" class="vital-value">98</span>
+                        <span class="vital-unit">%</span>
+                    </div>
+                    <div class="vital-sign">
+                        <span class="vital-label">Temperature:</span>
+                        <span id="temperature" class="vital-value">37.0</span>
+                        <span class="vital-unit">°C</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="vital-card" id="heart-rate-card">
-            <h5>Heart Rate</h5>
-            <h2 id="heart-rate-value">-- bpm</h2>
-        </div>
-        <div class="vital-card" id="blood-pressure-card">
-            <h5>Blood Pressure</h5>
-            <h2 id="blood-pressure-value">--/-- mmHg</h2>
-        </div>
-        <div class="vital-card" id="oxygen-card">
-            <h5>Oxygen Saturation</h5>
-            <h2 id="oxygen-value">--%</h2>
-        </div>
-        <div class="vital-card" id="temperature-card">
-            <h5>Temperature</h5>
-            <h2 id="temperature-value">--°F</h2>
-        </div>
-    </div>
-</div>
 
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-body">
-                <h4>Rhythm Analysis</h4>
-                <div id="rhythm-status" class="alert alert-info">
-                    Analyzing rhythm...
+    <!-- AI Analysis -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-dark text-white">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">AI Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div id="ai-analysis" class="analysis-content">
+                        Analyzing rhythm...
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    body {
+        background-color: #1a1a1a;
+        color: #ffffff;
+    }
+    .card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        background-color: #2d2d2d;
+        border-bottom: 1px solid #3d3d3d;
+    }
+    .vital-sign {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background-color: #2d2d2d;
+        border-radius: 4px;
+    }
+    .vital-label {
+        flex: 1;
+        color: #a0a0a0;
+    }
+    .vital-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin: 0 0.5rem;
+        color: #00ff00;
+    }
+    .vital-unit {
+        color: #808080;
+        font-size: 0.9rem;
+    }
+    .analysis-content {
+        font-family: monospace;
+        white-space: pre-wrap;
+        color: #00ff00;
+    }
+    .form-select {
+        border-color: #3d3d3d;
+        color: #ffffff;
+    }
+    .form-select:focus {
+        background-color: #2d2d2d;
+        border-color: #4d4d4d;
+        color: #ffffff;
+    }
+</style>
+
 {% endblock %}
 
 {% block scripts %}
@@ -106,21 +171,68 @@
             showgrid: true,
             gridcolor: '#202020',
             gridwidth: 1,
-            showticklabels: false
+            showticklabels: false,
+            range: [0, 1000],
+            gridpattern: 'dot',
+            griddash: [1, 4]
         },
         yaxis: {
             showgrid: true,
             gridcolor: '#202020',
             gridwidth: 1,
-            range: [-1.5, 3.5],  // Adjusted range for better visualization
-            showticklabels: false
+            range: [-1.5, 3.5],
+            showticklabels: false,
+            gridpattern: 'dot',
+            griddash: [1, 4]
         },
-        margin: { t: 40, l: 30, r: 30, b: 30 },
-        height: 400,
+        margin: { t: 30, l: 30, r: 30, b: 30 },
+        height: 200,
+        showlegend: false,
+        shapes: [
+            // Add vertical lines every 200 units (5mm on ECG paper)
+            ...Array.from({length: 6}, (_, i) => ({
+                type: 'line',
+                x0: i * 200,
+                y0: -1.5,
+                x1: i * 200,
+                y1: 3.5,
+                line: {
+                    color: '#202020',
+                    width: 1,
+                    dash: 'dot'
+                }
+            })),
+            // Add horizontal lines every 0.5 units (5mm on ECG paper)
+            ...Array.from({length: 11}, (_, i) => ({
+                type: 'line',
+                x0: 0,
+                y0: -1.5 + (i * 0.5),
+                x1: 1000,
+                y1: -1.5 + (i * 0.5),
+                line: {
+                    color: '#202020',
+                    width: 1,
+                    dash: 'dot'
+                }
+            }))
+        ]
+    };
+
+    // Add a second trace for the grid pattern
+    const gridTrace = {
+        x: [],
+        y: [],
+        type: 'scatter',
+        mode: 'lines',
+        line: {
+            color: '#202020',
+            width: 1,
+            dash: 'dot'
+        },
         showlegend: false
     };
 
-    Plotly.newPlot(ecgPlot, [trace], layout);
+    Plotly.newPlot(ecgPlot, [trace, gridTrace], layout);
 
     // Improved ECG wave generator functions
     function gaussian(x, mean, std) {
@@ -252,7 +364,7 @@
                 default:
                     heartRate = Math.floor(Math.random() * (100 - 60) + 60);
             }
-            document.getElementById('heart-rate-value').textContent = `${heartRate} bpm`;
+            document.getElementById('heart-rate').textContent = `${heartRate} bpm`;
             updateCardStatus('heart-rate-card', heartRate, 60, 100);
         }
     }
@@ -264,9 +376,9 @@
         const oxygen = Math.floor(Math.random() * (100 - 95) + 95);
         const temperature = (Math.random() * (99.5 - 97.5) + 97.5).toFixed(1);
 
-        document.getElementById('blood-pressure-value').textContent = `${systolic}/${diastolic} mmHg`;
-        document.getElementById('oxygen-value').textContent = `${oxygen}%`;
-        document.getElementById('temperature-value').textContent = `${temperature}°F`;
+        document.getElementById('blood-pressure').textContent = `${systolic}/${diastolic} mmHg`;
+        document.getElementById('o2-saturation').textContent = `${oxygen}%`;
+        document.getElementById('temperature').textContent = `${temperature}°C`;
 
         updateCardStatus('oxygen-card', oxygen, 95, 100);
         updateCardStatus('temperature-card', temperature, 97.5, 99.5);
@@ -309,9 +421,9 @@
             pvc: { name: 'Premature Ventricular Contractions', class: 'alert-warning' }
         };
 
-        const statusDiv = document.getElementById('rhythm-status');
+        const statusDiv = document.getElementById('ai-analysis');
         const rhythmDisplay = rhythmInfo[detectedRhythm] || rhythmInfo.normal;
-        statusDiv.className = `alert ${rhythmDisplay.class}`;
+        statusDiv.className = `analysis-content ${rhythmDisplay.class}`;
         statusDiv.textContent = `AI Analysis: ${rhythmDisplay.name} (Confidence: ${(rhythmConfidence * 100).toFixed(1)}%)`;
     }
 
