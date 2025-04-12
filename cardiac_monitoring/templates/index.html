@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Welcome to RhythmIQ</h1>
+    <p class="lead">Real-time AI-powered cardiac monitoring system</p>
+    
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Quick Actions</h5>
+                <div class="list-group">
+                    <a href="{{ url_for('patients') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">View All Patients</h6>
+                            <small>→</small>
+                        </div>
+                        <p class="mb-1">Access the complete list of patients and their monitoring status</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Add New Patient</h6>
+                            <small>→</small>
+                        </div>
+                        <p class="mb-1">Register a new patient for monitoring</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">System Features</h5>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <i class="fas fa-heartbeat text-danger"></i> Real-time heart rate monitoring
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-wave-square text-primary"></i> ECG rhythm analysis
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-brain text-success"></i> AI-powered arrhythmia detection
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-chart-line text-info"></i> Vital signs tracking
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-bell text-warning"></i> Automatic alerts for abnormal readings
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-bell text-warning"></i> Emphasis on alarm fatigue reduction
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-bell text-warning"></i> Reduction in false positives
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Patient Modal (same as in patients.html) -->
+<div class="modal fade" id="addPatientModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Patient</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addPatientForm">
+                    <div class="mb-3">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="firstName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                        <input type="date" class="form-control" id="dateOfBirth" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="mrn" class="form-label">Medical Record Number</label>
+                        <input type="text" class="form-control" id="mrn" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="addPatient()">Add Patient</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function addPatient() {
+        const formData = {
+            first_name: document.getElementById('firstName').value,
+            last_name: document.getElementById('lastName').value,
+            date_of_birth: document.getElementById('dateOfBirth').value,
+            medical_record_number: document.getElementById('mrn').value,
+            notes: document.getElementById('notes').value
+        };
+
+        fetch('/patients', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                window.location.href = '/patients';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adding patient');
+        });
+    }
+</script>
+{% endblock %} 
