@@ -1,6 +1,42 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .ekg-paper {
+        background-color: #000000;
+        background-image: 
+            linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+            linear-gradient(0deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+        background-size: 20px 20px;
+        background-position: center center;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+    
+    .ekg-paper::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
+        background-size: 100px 100px;
+        pointer-events: none;
+    }
+
+    .card-body.p-0 {
+        background-color: #000000 !important;
+    }
+
+    #ecg-plot {
+        background-color: #000000 !important;
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row">
         <!-- Patient Information -->
@@ -44,7 +80,9 @@
                     </div>
                 </div>
                 <div class="card-body p-0 position-relative">
-                    <div id="ecg-plot" style="height: 300px;"></div>
+                    <div class="ekg-paper">
+                        <div id="ecg-plot"></div>
+                    </div>
                     <div id="rhythm-display" class="position-absolute" style="bottom: 20px; left: 20px; font-size: 24px;">
                         <span class="rhythm-text">Normal Sinus Rhythm</span>
                         <span class="ai-indicator" style="display: none;">●</span>
@@ -264,7 +302,11 @@
 
     // Initialize the ECG plot with more realistic settings
     const ecgPlot = document.getElementById('ecg-plot');
-    const numPoints = 3000;  // 6 seconds * 500 points per second
+    // At 25mm/s, each mm represents 0.04 seconds
+    // For 6 seconds of display, we need: 6 seconds * 25mm/s = 150mm
+    // Converting to points (assuming 96 DPI, 1mm ≈ 3.78 pixels)
+    const pointsPerSecond = 500;  // Sampling rate
+    const numPoints = 6 * pointsPerSecond;  // 6 seconds of data
     const initialData = Array(numPoints).fill(0);
     
     const trace = {
@@ -272,107 +314,32 @@
         type: 'scatter',
         mode: 'lines',
         line: {
-            color: '#00ff00',
-            width: 2  // Slightly thicker line for clearer display
+            color: '#00ff00',  // Green line for ECG trace
+            width: 2
         }
     };
     
     const layout = {
-        title: 'Real-time ECG',
         paper_bgcolor: '#000000',
         plot_bgcolor: '#000000',
         xaxis: {
-            showgrid: true,
-            gridcolor: 'rgba(255, 255, 255, 0.3)',
-            gridwidth: 1,
+            showgrid: false,
             showticklabels: false,
-            range: [0, 3000],  // Increased to show 6 seconds (6 * 500 points per second)
-            gridpattern: 'dot',
-            griddash: [1, 4]
+            zeroline: false,
+            range: [0, numPoints]
         },
         yaxis: {
-            showgrid: true,
-            gridcolor: 'rgba(255, 255, 255, 0.3)',
-            gridwidth: 1,
-            range: [-1.5, 3.5],
+            showgrid: false,
             showticklabels: false,
-            gridpattern: 'dot',
-            griddash: [1, 4]
+            zeroline: false,
+            range: [-2, 2]
         },
-        margin: { t: 30, l: 30, r: 30, b: 30 },
-        height: 300,  // Increased height for better visibility
-        showlegend: false,
-        shapes: [
-            // Add major vertical lines every 250 units (5mm on ECG paper = 0.2 seconds)
-            ...Array.from({length: 13}, (_, i) => ({  // Increased number of major lines
-                type: 'line',
-                x0: i * 250,
-                y0: -1.5,
-                x1: i * 250,
-                y1: 3.5,
-                line: {
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    width: 1,
-                    dash: 'dot'
-                }
-            })),
-            // Add minor vertical lines every 50 units (1mm on ECG paper = 0.04 seconds)
-            ...Array.from({length: 61}, (_, i) => ({  // Increased number of minor lines
-                type: 'line',
-                x0: i * 50,
-                y0: -1.5,
-                x1: i * 50,
-                y1: 3.5,
-                line: {
-                    color: 'rgba(255, 255, 255, 0.2)',
-                    width: 1,
-                    dash: 'dot'
-                }
-            })),
-            // Add major horizontal lines every 0.5 units (5mm on ECG paper = 0.5mV)
-            ...Array.from({length: 11}, (_, i) => ({
-                type: 'line',
-                x0: 0,
-                y0: -1.5 + (i * 0.5),
-                x1: 3000,  // Extended to match new range
-                y1: -1.5 + (i * 0.5),
-                line: {
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    width: 1,
-                    dash: 'dot'
-                }
-            })),
-            // Add minor horizontal lines every 0.1 units (1mm on ECG paper = 0.1mV)
-            ...Array.from({length: 51}, (_, i) => ({
-                type: 'line',
-                x0: 0,
-                y0: -1.5 + (i * 0.1),
-                x1: 3000,  // Extended to match new range
-                y1: -1.5 + (i * 0.1),
-                line: {
-                    color: 'rgba(255, 255, 255, 0.2)',
-                    width: 1,
-                    dash: 'dot'
-                }
-            }))
-        ]
-    };
-
-    // Add a second trace for the grid pattern
-    const gridTrace = {
-        x: [],
-        y: [],
-        type: 'scatter',
-        mode: 'lines',
-        line: {
-            color: '#202020',
-            width: 1,
-            dash: 'dot'
-        },
+        margin: { t: 20, l: 20, r: 20, b: 20 },
+        height: 300,
         showlegend: false
     };
 
-    Plotly.newPlot(ecgPlot, [trace, gridTrace], layout);
+    Plotly.newPlot(ecgPlot, [trace], layout);
 
     // Improved ECG wave generator functions
     function gaussian(x, mean, std) {
@@ -529,19 +496,16 @@
             if (currentTime - dangerousRhythmStartTime >= DANGEROUS_RHYTHM_DELAY) {
                 trace.line.color = '#ff0000';
                 playAlarm();
-                // Add critical class to heart rate vital sign
                 document.querySelector('.vital-sign').classList.add('critical');
             } else {
                 trace.line.color = '#00ff00';
                 stopAlarm();
-                // Remove critical class from heart rate vital sign
                 document.querySelector('.vital-sign').classList.remove('critical');
             }
         } else {
             dangerousRhythmStartTime = 0;
             trace.line.color = '#00ff00';
             stopAlarm();
-            // Remove critical class from heart rate vital sign
             document.querySelector('.vital-sign').classList.remove('critical');
         }
         
@@ -553,7 +517,7 @@
         t += 1;
         
         // Update heart rate based on rhythm
-        if (t % 200 === 0) {
+        if (t % (pointsPerSecond / 4) === 0) {  // Update every 0.25 seconds
             let heartRate;
             switch(currentRhythm) {
                 case 'tachycardia':
@@ -572,10 +536,10 @@
                     heartRate = Math.floor(Math.random() * (250 - 200) + 200);
                     break;
                 case 'asystole':
-                    heartRate = 0;  // No heart rate in asystole
+                    heartRate = 0;
                     break;
                 case 'pea':
-                    heartRate = Math.floor(Math.random() * (40 - 20) + 20);  // Very low heart rate
+                    heartRate = Math.floor(Math.random() * (40 - 20) + 20);
                     break;
                 case 'afib':
                     heartRate = Math.floor(Math.random() * (180 - 100) + 100);
@@ -585,7 +549,6 @@
             }
             const heartRateElement = document.getElementById('heart-rate');
             heartRateElement.textContent = `${heartRate} bpm`;
-            // Only update card status if not in a dangerous rhythm
             if (!isDangerousRhythm || currentTime - dangerousRhythmStartTime < DANGEROUS_RHYTHM_DELAY) {
                 updateCardStatus('heart-rate-card', heartRate, 60, 100);
             }
@@ -656,8 +619,9 @@
         updateRhythmDisplay(rhythmDisplay.name, rhythmConfidence);
     }
 
-    // Update ECG more frequently for smooth animation
-    setInterval(updateECG, 20);  // 50 fps update rate
+    // Update ECG more frequently for smooth animation at 25mm/s
+    // At 25mm/s and 500 points per second, we need to update every 2ms
+    setInterval(updateECG, 2);  // 500 fps update rate for smooth 25mm/s display
     
     // Update other vitals every second
     setInterval(updateVitals, 1000);
@@ -706,6 +670,39 @@
         if (data.arrhythmia && data.arrhythmia.rhythm) {
             updateRhythmDisplay(data.arrhythmia.rhythm, data.arrhythmia.confidence);
         }
+    }
+
+    function updateECGPlot(data) {
+        const plotData = [{
+            y: data.ecg_data,
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#000',
+                width: 2
+            },
+            name: 'ECG'
+        }];
+
+        const layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: { t: 20, r: 20, b: 40, l: 40 },
+            xaxis: {
+                showgrid: false,
+                showticklabels: false,
+                zeroline: false
+            },
+            yaxis: {
+                showgrid: false,
+                showticklabels: false,
+                zeroline: false,
+                range: [-2, 2]
+            },
+            height: 300
+        };
+
+        Plotly.newPlot('ecg-plot', plotData, layout);
     }
 </script>
 {% endblock %} 

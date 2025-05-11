@@ -2,14 +2,32 @@
 
 {% block content %}
 <div class="container-fluid">
-    <div class="row">
-        <!-- Patient Information -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <button id="addPatientBtn" class="btn btn-primary float-end">
+                <i class="fas fa-plus"></i> Add Patient
+            </button>
+        </div>
+    </div>
+    <div id="patientsContainer">
+        <!-- No patients message -->
+        <div id="noPatientsMessage" class="text-center py-5">
+            <h3 class="text-muted">No Patients Added</h3>
+            <p class="text-muted">Click the "Add Patient" button to begin monitoring</p>
+        </div>
+    </div>
+
+    <!-- Original patient card -->
+    <div class="row patient-row">
         <div class="col-md-2">
-            <div class="card bg-dark text-white mb-3">
-                <div class="card-header">
+            <div class="card patient-info-card mb-3">
+                <div class="card-header patient-info-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Patient Information</h5>
+                    <button class="btn btn-danger btn-sm delete-patient" onclick="deletePatient(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
-                <div class="card-body">
+                <div class="card-body patient-info-body">
                     <p><strong>Name:</strong> <span id="patient-name">John Doe</span></p>
                     <p><strong>ID:</strong> <span id="patient-id">12345</span></p>
                     <p><strong>Age:</strong> <span id="patient-age">45</span></p>
@@ -17,7 +35,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Main ECG Display -->
         <div class="col-md-7">
             <div class="card bg-dark text-white mb-3">
@@ -42,18 +59,18 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <div id="ecg-plot" style="height: 300px;"></div>
+                    <div id="ecg-plot" style="height: 400px;"></div>
                 </div>
             </div>
         </div>
 
         <!-- Vital Signs -->
         <div class="col-md-3">
-            <div class="card bg-dark text-white mb-3">
-                <div class="card-header">
+            <div class="card vital-signs-card mb-3">
+                <div class="card-header vital-signs-header">
                     <h5 class="card-title mb-0">Vital Signs</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body vital-signs-body">
                     <div class="vital-sign">
                         <span class="vital-label">Heart Rate:</span>
                         <span id="heart-rate" class="vital-value">75</span>
@@ -98,52 +115,73 @@
 
 <style>
     body {
-        background-color: #1a1a1a;
-        color: #ffffff;
+        background-color: #f0f0f0;  /* Light gray background */
+        color: #000000;
+        padding: 20px;
+    }
+    .container-fluid {
+        max-width: 1600px;  /* Wider container */
+        margin: 0 auto;
+    }
+    .row {
+        margin-bottom: 30px;  /* More vertical spacing between rows */
     }
     .card {
         border: none;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;  /* Consistent card spacing */
     }
-    .card-header {
-        background-color: #2d2d2d;
-        border-bottom: 1px solid #3d3d3d;
+    .patient-info-card, .vital-signs-card {
+        background-color: #fff !important;
+        color: #000 !important;
+        height: 100%;  /* Make cards same height */
+    }
+    .patient-info-header, .vital-signs-header {
+        background-color: #f5f5f5 !important;
+        color: #000 !important;
+        border-bottom: 1px solid #e0e0e0;
+        padding: 15px;
+    }
+    .patient-info-body, .vital-signs-body {
+        color: #000 !important;
+        padding: 20px;
     }
     .vital-sign {
-        display: flex;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding: 0.5rem;
-        background-color: #2d2d2d;
+        background-color: #f9f9f9;
+        color: #000 !important;
+        margin-bottom: 15px;
+        padding: 12px;
         border-radius: 4px;
     }
-    .vital-label {
-        flex: 1;
-        color: #a0a0a0;
-    }
     .vital-value {
+        color: #000 !important;
         font-size: 1.2rem;
         font-weight: bold;
-        margin: 0 0.5rem;
-        color: #00ff00;
     }
     .vital-unit {
-        color: #808080;
-        font-size: 0.9rem;
+        color: #333 !important;
     }
-    .analysis-content {
-        font-family: monospace;
-        white-space: pre-wrap;
-        color: #00ff00;
+    #ecg-plot {
+        height: 400px;  /* Taller ECG display */
+        background-color: #000;
+        border-radius: 4px;
+        margin: 10px 0;
     }
-    .form-select {
-        border-color: #3d3d3d;
-        color: #ffffff;
+    .card-header {
+        padding: 15px;
     }
-    .form-select:focus {
-        background-color: #2d2d2d;
-        border-color: #4d4d4d;
-        color: #ffffff;
+    .card-body {
+        padding: 20px;
+    }
+    /* Adjust column widths for better horizontal spacing */
+    .col-md-2 {
+        width: 20%;
+    }
+    .col-md-7 {
+        width: 60%;
+    }
+    .col-md-3 {
+        width: 20%;
     }
     .alarm-active {
         animation: alarm-flash 1s infinite;
@@ -181,6 +219,54 @@
     .vital-sign.critical .vital-value,
     .vital-sign.critical .vital-unit {
         color: #ff0000;
+    }
+    .patient-row {
+        margin-bottom: 40px;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        display: none;  /* Initially hidden */
+    }
+    .patient-row.deleting {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    .patient-row.visible {
+        display: flex;  /* Show when visible class is added */
+    }
+    #addPatientBtn {
+        background-color: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+    #addPatientBtn:hover {
+        background-color: #0056b3;
+    }
+    .patient-row:not(:last-child) {
+        border-bottom: 2px solid #e0e0e0;
+    }
+    .delete-patient {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+        background-color: #dc3545;
+        border: none;
+        color: white;
+    }
+    .delete-patient:hover {
+        background-color: #c82333;
+    }
+    #noPatientsMessage {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    #noPatientsMessage h3 {
+        margin-bottom: 10px;
     }
 </style>
 
@@ -637,195 +723,177 @@
     // Update AI analysis every 3 seconds
     setInterval(analyzeRhythm, 3000);
 
-    // Add simulator connection controls
-    const simulatorControls = document.createElement('div');
-    simulatorControls.className = 'simulator-controls';
-    simulatorControls.innerHTML = `
-        <div class="simulator-panel">
-            <select id="portSelector" class="form-select form-select-sm bg-dark text-white">
-                <option value="">Auto-detect port</option>
-            </select>
-            <div class="btn-group">
-                <button id="refreshPorts" class="btn btn-secondary">Refresh Ports</button>
-                <button id="connectSimulator" class="btn btn-primary">Connect</button>
-                <button id="disconnectSimulator" class="btn btn-danger" disabled>Disconnect</button>
+    // Function to update visibility of no patients message
+    function updateNoPatientsMessage() {
+        const noPatientsMessage = document.getElementById('noPatientsMessage');
+        const patientRows = document.querySelectorAll('.patient-row');
+        const hasPatients = patientRows.length > 0;
+        
+        noPatientsMessage.style.display = hasPatients ? 'none' : 'block';
+        
+        // Show/hide patient rows
+        patientRows.forEach(row => {
+            row.classList.toggle('visible', hasPatients);
+        });
+    }
+
+    // Modify the add patient function
+    document.getElementById('addPatientBtn').addEventListener('click', function() {
+        const patientsContainer = document.getElementById('patientsContainer');
+        const newPatientRow = document.createElement('div');
+        newPatientRow.className = 'row patient-row visible';  // Add visible class
+        
+        // Generate a unique ID for the new patient
+        const patientId = 'P' + Math.floor(Math.random() * 10000);
+        
+        newPatientRow.innerHTML = `
+            <div class="col-md-2">
+                <div class="card patient-info-card mb-3">
+                    <div class="card-header patient-info-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Patient Information</h5>
+                        <button class="btn btn-danger btn-sm delete-patient" onclick="deletePatient(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="card-body patient-info-body">
+                        <p><strong>Name:</strong> <span class="patient-name">New Patient</span></p>
+                        <p><strong>ID:</strong> <span class="patient-id">${patientId}</span></p>
+                        <p><strong>Age:</strong> <span class="patient-age">--</span></p>
+                        <p><strong>Room:</strong> <span class="patient-room">--</span></p>
+                    </div>
+                </div>
             </div>
-            <div id="simulatorStatus" class="status-indicator">
-                Status: Disconnected
+            <div class="col-md-7">
+                <div class="card bg-dark text-white mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">ECG Monitor</h5>
+                        <div>
+                            <select class="form-select form-select-sm bg-dark text-white">
+                                <option value="normal">Normal Sinus Rhythm</option>
+                                <option value="tachycardia">Sinus Tachycardia</option>
+                                <option value="bradycardia">Sinus Bradycardia</option>
+                                <option value="afib">Atrial Fibrillation</option>
+                                <option value="vtach">Ventricular Tachycardia</option>
+                                <option value="vfib">Ventricular Fibrillation</option>
+                                <option value="torsades">Torsades de Pointes</option>
+                                <option value="asystole">Asystole</option>
+                                <option value="pea">Pulseless Electrical Activity</option>
+                                <option value="heart_block_2">2nd Degree Heart Block</option>
+                                <option value="heart_block_3">3rd Degree Heart Block</option>
+                                <option value="pvc">Premature Ventricular Contractions</option>
+                                <option value="random">Random Rhythm</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="ecg-plot" style="height: 400px;"></div>
+                    </div>
+                </div>
             </div>
-        </div>
-    `;
-    document.querySelector('.card-header').appendChild(simulatorControls);
+            <div class="col-md-3">
+                <div class="card vital-signs-card mb-3">
+                    <div class="card-header vital-signs-header">
+                        <h5 class="card-title mb-0">Vital Signs</h5>
+                    </div>
+                    <div class="card-body vital-signs-body">
+                        <div class="vital-sign">
+                            <span class="vital-label">Heart Rate:</span>
+                            <span class="vital-value">--</span>
+                            <span class="vital-unit">bpm</span>
+                        </div>
+                        <div class="vital-sign">
+                            <span class="vital-label">Blood Pressure:</span>
+                            <span class="vital-value">--/--</span>
+                            <span class="vital-unit">mmHg</span>
+                        </div>
+                        <div class="vital-sign">
+                            <span class="vital-label">O2 Saturation:</span>
+                            <span class="vital-value">--</span>
+                            <span class="vital-unit">%</span>
+                        </div>
+                        <div class="vital-sign">
+                            <span class="vital-label">Temperature:</span>
+                            <span class="vital-value">--</span>
+                            <span class="vital-unit">°C</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        patientsContainer.appendChild(newPatientRow);
+        
+        // Initialize ECG plot for the new patient
+        const newEcgPlot = newPatientRow.querySelector('.ecg-plot');
+        initializeECGPlot(newEcgPlot);
+        
+        // Update visibility
+        updateNoPatientsMessage();
+    });
 
-    // Add styles for simulator controls
-    const style = document.createElement('style');
-    style.textContent = `
-        .simulator-controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-left: 1rem;
-        }
-        .simulator-panel {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        #portSelector {
-            min-width: 200px;
-        }
-        .status-indicator {
-            color: #ff0000;
-            font-weight: bold;
-        }
-        .status-indicator.connected {
-            color: #00ff00;
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Function to refresh available ports
-    async function refreshPorts() {
-        try {
-            const response = await fetch('/simulator/ports');
-            const data = await response.json();
-            
-            const portSelector = document.getElementById('portSelector');
-            // Clear existing options except auto-detect
-            portSelector.innerHTML = '<option value="">Auto-detect port</option>';
-            
-            // Add available ports
-            data.ports.forEach(port => {
-                const option = document.createElement('option');
-                option.value = port.device;
-                option.textContent = `${port.device} - ${port.description}`;
-                portSelector.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error fetching ports:', error);
-            alert('Failed to fetch available ports. Check console for details.');
-        }
-    }
-
-    // Modified connect function to use selected port
-    async function connectToSimulator() {
-        try {
-            const selectedPort = document.getElementById('portSelector').value;
-            const response = await fetch('/simulator/connect', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ port: selectedPort })  // Empty string will trigger auto-detection
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                isSimulatorConnected = true;
-                document.getElementById('connectSimulator').disabled = true;
-                document.getElementById('disconnectSimulator').disabled = false;
-                document.getElementById('portSelector').disabled = true;
-                document.getElementById('refreshPorts').disabled = true;
-                document.getElementById('simulatorStatus').textContent = 'Status: Connected';
-                document.getElementById('simulatorStatus').className = 'status-indicator connected';
-                
-                // Start polling for ECG data
-                simulatorDataInterval = setInterval(pollECGData, 20); // 50Hz polling
-            } else {
-                alert('Failed to connect to simulator: ' + data.message);
+    // Function to initialize ECG plot for new patients
+    function initializeECGPlot(container) {
+        const numPoints = 3000;
+        const initialData = Array(numPoints).fill(0);
+        
+        const trace = {
+            y: initialData,
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#00ff00',
+                width: 2
             }
-        } catch (error) {
-            console.error('Error connecting to simulator:', error);
-            alert('Failed to connect to simulator. Check console for details.');
-        }
+        };
+        
+        const layout = {
+            paper_bgcolor: '#000000',
+            plot_bgcolor: '#000000',
+            xaxis: {
+                showgrid: true,
+                gridcolor: 'rgba(255, 255, 255, 0.3)',
+                gridwidth: 1,
+                showticklabels: false,
+                range: [0, 3000],
+                gridpattern: 'dot',
+                griddash: [1, 4]
+            },
+            yaxis: {
+                showgrid: true,
+                gridcolor: 'rgba(255, 255, 255, 0.3)',
+                gridwidth: 1,
+                range: [-1.5, 3.5],
+                showticklabels: false,
+                gridpattern: 'dot',
+                griddash: [1, 4]
+            },
+            margin: { t: 30, l: 30, r: 30, b: 30 },
+            height: 400,
+            showlegend: false
+        };
+
+        Plotly.newPlot(container, [trace], layout);
     }
 
-    // Modified disconnect function
-    async function disconnectFromSimulator() {
-        try {
-            const response = await fetch('/simulator/disconnect', { method: 'POST' });
-            const data = await response.json();
+    // Modify the delete patient function
+    function deletePatient(button) {
+        const patientRow = button.closest('.patient-row');
+        if (patientRow) {
+            // Add animation class
+            patientRow.classList.add('deleting');
             
-            if (data.success) {
-                isSimulatorConnected = false;
-                document.getElementById('connectSimulator').disabled = false;
-                document.getElementById('disconnectSimulator').disabled = true;
-                document.getElementById('portSelector').disabled = false;
-                document.getElementById('refreshPorts').disabled = false;
-                document.getElementById('simulatorStatus').textContent = 'Status: Disconnected';
-                document.getElementById('simulatorStatus').className = 'status-indicator';
-                
-                // Stop polling for ECG data
-                if (simulatorDataInterval) {
-                    clearInterval(simulatorDataInterval);
-                    simulatorDataInterval = null;
-                }
-            }
-        } catch (error) {
-            console.error('Error disconnecting from simulator:', error);
-            alert('Failed to disconnect from simulator. Check console for details.');
+            // Remove the row after animation
+            setTimeout(() => {
+                patientRow.remove();
+                // Update visibility after removal
+                updateNoPatientsMessage();
+            }, 300);
         }
     }
 
-    // Event listeners for simulator controls
-    document.getElementById('refreshPorts').addEventListener('click', refreshPorts);
-    document.getElementById('connectSimulator').addEventListener('click', connectToSimulator);
-    document.getElementById('disconnectSimulator').addEventListener('click', disconnectFromSimulator);
-
-    // Initial port refresh
-    refreshPorts();
-
-    // Simulator connection handling
-    let isSimulatorConnected = false;
-    let simulatorDataInterval = null;
-
-    async function pollECGData() {
-        if (!isSimulatorConnected) return;
-        
-        try {
-            const response = await fetch('/simulator/ecg_data');
-            const data = await response.json();
-            
-            if (data.length > 0) {
-                // Update ECG trace with real data
-                Plotly.update(ecgPlot, {
-                    y: [data]
-                });
-                
-                // Calculate heart rate from real data
-                calculateHeartRate(data);
-            }
-        } catch (error) {
-            console.error('Error polling ECG data:', error);
-        }
-    }
-
-    function calculateHeartRate(ecgData) {
-        // Simple peak detection for heart rate calculation
-        let peaks = 0;
-        let lastPeak = 0;
-        const threshold = 1.0; // Adjust based on your ECG signal amplitude
-        
-        for (let i = 1; i < ecgData.length - 1; i++) {
-            if (ecgData[i] > threshold && 
-                ecgData[i] > ecgData[i-1] && 
-                ecgData[i] > ecgData[i+1] &&
-                i - lastPeak > 100) { // Minimum 200ms between peaks
-                peaks++;
-                lastPeak = i;
-            }
-        }
-        
-        // Calculate heart rate (beats per minute)
-        const timeWindow = ecgData.length / 500; // seconds (assuming 500Hz sampling)
-        const heartRate = Math.round((peaks / timeWindow) * 60);
-        
-        // Update heart rate display
-        const heartRateElement = document.getElementById('heart-rate');
-        heartRateElement.textContent = `${heartRate} bpm`;
-        
-        // Update card status
-        updateCardStatus('heart-rate-card', heartRate, 60, 100);
-    }
+    // Initialize visibility on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateNoPatientsMessage();
+    });
 </script>
 {% endblock %} 

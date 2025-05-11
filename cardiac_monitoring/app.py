@@ -65,6 +65,13 @@ def login():
         email = request.form['email']
         password = request.form['password']
         
+        # Hardcoded test credentials
+        if email == 'user@cardiacmonitor.com' and password == 'Test12345':
+            session['tenant_id'] = 1
+            session['tenant_name'] = 'Test User'
+            return redirect(url_for('dashboard'))
+        
+        # Original login logic as fallback
         tenant = Tenant.query.filter_by(email=email).first()
         if tenant and tenant.check_password(password):
             session['tenant_id'] = tenant.id

@@ -29,18 +29,8 @@ class ProSim8Connection:
 
     def connect(self, port=None, baudrate=9600):
         try:
-            # If no port specified, try to auto-detect ProSim 8
             if port is None:
-                ports = self.list_available_ports()
-                for p in ports:
-                    # Look for ports that might be the ProSim 8
-                    # You may need to adjust this based on how the ProSim 8 identifies itself
-                    if 'USB' in p['description'].upper() or 'SERIAL' in p['description'].upper():
-                        port = p['device']
-                        break
-                
-                if port is None:
-                    return False, "No suitable serial port found. Please connect ProSim 8 and try again."
+                return False, "Please select a port to connect."
 
             self.serial_port = serial.Serial(
                 port=port,

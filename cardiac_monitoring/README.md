@@ -1,4 +1,4 @@
-# RhythmIQ - a smart, AI powered analysis sytem
+# HeartsenseAI - a smart, AI powered analysis system
 
 A web-based cardiac monitoring system built with Flask that provides real-time ECG visualization and arrhythmia detection. This system aims to reduce alarm fatigue in healthcare settings by providing intelligent, context-aware monitoring and alerting.
 
